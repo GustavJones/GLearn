@@ -1,0 +1,16 @@
+cmake_minimum_required(VERSION 3.15)
+project(GLearn-NeuralNetwork CXX)
+
+if(BUILD_SHARED_LIBS)
+  message(STATUS "-------------------------------------------------")
+  message(STATUS "BUILDING GLearn-NeuralNetwork as a SHARED LIBRARY")
+  message(STATUS "-------------------------------------------------")
+else()
+  message(STATUS "-------------------------------------------------")
+  message(STATUS "BUILDING GLearn-NeuralNetwork as a STATIC LIBRARY")
+  message(STATUS "-------------------------------------------------")
+endif()
+
+file(GLOB SOURCES "*.cpp")
+add_library(GLearn-NeuralNetwork ${SOURCES})
+target_include_directories(GLearn-NeuralNetwork PRIVATE ../../include/)
