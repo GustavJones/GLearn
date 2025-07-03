@@ -4,12 +4,12 @@
 namespace GLearn {
 namespace NeuralNetwork {
 namespace Error {
-double_t SquaredError(double_t _x, double_t _expected, bool _derivative) {
-  if (_derivative) {
-    return -2 * std::pow(_expected - _x, 2);
-  } else {
-    return std::pow(_expected - _x, 2);
-  }
+double_t SquaredError(double_t _x, double_t _expected) {
+  return std::pow(_expected - _x, 2);
+}
+
+double_t AbsoluteError(double_t _x, double_t _expected) {
+  return std::sqrt(SquaredError(_x, _expected));
 }
 } // namespace Error
 } // namespace NeuralNetwork
