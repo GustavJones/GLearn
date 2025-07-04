@@ -5,6 +5,9 @@
 #include <vector>
 #include <random>
 #include <iostream>
+#include <fstream>
+#include <string>
+#include "nlohmann/json.hpp"
 
 namespace GLearn {
 namespace NeuralNetwork {
@@ -101,6 +104,150 @@ struct Model {
     }
 
     return true;
+  }
+
+  inline void LoadModel(const std::string& _filepath, const std::map<std::string, ERROR_FUNCTION>& _errorFunctionNames = Error::Functions, const std::map<std::string, ACTIVATION_FUNCTION>& _activationFunctionNames = Activation::Functions) {
+    nlohmann::json modelJson;
+    std::string modelString;
+    char c;
+    
+    std::vector<std::vector<double_t>> layerWeights;
+    std::vector<double_t> layerBiases;
+    std::vector<ACTIVATION_FUNCTION> layerActivationFunctions;
+
+    std::string activationFunctionString;
+    ACTIVATION_FUNCTION activationFunctionPointer;
+
+    std::fstream f;
+    f.open(_filepath, std::ios::in);
+    if (!f.is_open())
+    {
+      f.close();
+      throw std::runtime_error("Cannot find model file");
+    }
+
+    while (!f.eof())
+    {
+      f.get(c);
+
+      if (!f.eof())
+      {
+        modelString += c;
+      }
+    }
+
+    f.close();
+
+    errorFunction = nullptr;
+    activationFunctions.clear();
+    weights.clear();
+    biases.clear();
+
+    modelJson = nlohmann::json::parse(modelString);
+
+    for (const auto& func : _errorFunctionNames)
+    {
+      if (func.first == modelJson["errorFunction"])
+      {
+        errorFunction = func.second;
+      }
+    }
+
+    if (errorFunction == nullptr)
+    {
+      throw std::runtime_error("Cannot find error function string");
+    }
+
+    for (size_t layer = 0; layer < modelJson["layers"].size(); layer++)
+    {
+      layerWeights.clear();
+      layerBiases.clear();
+      layerActivationFunctions.clear();
+
+      for (size_t neuron = 0; neuron < modelJson["layers"][std::to_string(layer)]["neurons"].size(); neuron++)
+      {
+        layerWeights.push_back(modelJson["layers"][std::to_string(layer)]["neurons"][std::to_string(neuron)]["weights"].get<std::vector<double_t>>());
+        layerBiases.push_back(modelJson["layers"][std::to_string(layer)]["neurons"][std::to_string(neuron)]["bias"].get<double_t>());
+        activationFunctionString = modelJson["layers"][std::to_string(layer)]["neurons"][std::to_string(neuron)]["activationFunction"].get<std::string>();
+
+        activationFunctionPointer = nullptr;
+        for (const auto& func : _activationFunctionNames)
+        {
+          if (func.first == activationFunctionString)
+          {
+            activationFunctionPointer = func.second;
+          }
+        }
+
+        if (activationFunctionPointer == nullptr)
+        {
+          throw std::runtime_error("Cannot find activation function string");
+        }
+
+        layerActivationFunctions.push_back(activationFunctionPointer);
+      }
+
+      weights.push_back(layerWeights);
+      biases.push_back(layerBiases);
+      activationFunctions.push_back(layerActivationFunctions);
+    }
+  }
+
+  inline void SaveModel(const std::string& _filepath, const std::map<std::string, ERROR_FUNCTION> &_errorFunctionNames = Error::Functions, const std::map<std::string, ACTIVATION_FUNCTION>& _activationFunctionNames = Activation::Functions, const size_t _jsonIndentSize = 2) {
+    if (!IsValid()) throw std::runtime_error("Cannot save invalid model");
+
+    nlohmann::json modelJson;
+    std::string modelString;
+    std::string errorFunctionString;
+    std::string activationFunctionString;
+
+    for (const auto& func : _errorFunctionNames)
+    {
+      if (func.second == errorFunction)
+      {
+        errorFunctionString = func.first;
+        break;
+      }
+    }
+
+    if (errorFunctionString == "")
+    {
+      throw std::runtime_error("Cannot find error function string");
+    }
+
+    modelJson["inputs"] = (weights[0][0]).size();
+    modelJson["errorFunction"] = errorFunctionString;
+
+    for (size_t layer = 0; layer < weights.size(); layer++)
+    {
+      for (size_t neuron = 0; neuron < weights[layer].size(); neuron++)
+      {
+        for (const auto& func : _activationFunctionNames)
+        {
+          if (func.second == activationFunctions[layer][neuron])
+          {
+            activationFunctionString = func.first;
+            break;
+          }
+        }
+
+        if (activationFunctionString == "")
+        {
+          throw std::runtime_error("Cannot find activation function string");
+        }
+
+        modelJson["layers"][std::to_string(layer)]["neurons"][std::to_string(neuron)]["weights"] = weights[layer][neuron];
+        modelJson["layers"][std::to_string(layer)]["neurons"][std::to_string(neuron)]["bias"] = biases[layer][neuron];
+        modelJson["layers"][std::to_string(layer)]["neurons"][std::to_string(neuron)]["activationFunction"] = activationFunctionString;
+      }
+    }
+
+    modelString = modelJson.dump(_jsonIndentSize);
+
+    std::fstream f;
+    f.open(_filepath, std::ios::out);
+    f.write(modelString.c_str(), modelString.length());
+    f.close();
   }
 };
 } // namespace NeuralNetwork

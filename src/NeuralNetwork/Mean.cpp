@@ -3,7 +3,7 @@
 
 namespace GLearn {
 namespace NeuralNetwork {
-double_t GLearn::NeuralNetwork::Mean(const std::vector<double_t> &_values, bool _derivative) {
+double_t NeuralNetwork::Mean(const std::vector<double_t> &_values, bool _derivative) {
   double_t sum = 0;
 
   if (_derivative)

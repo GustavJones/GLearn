@@ -8,34 +8,32 @@ int main(int argc, char* argv[]) {
   GLearn::NeuralNetwork::Network net;
   GLearn::NeuralNetwork::Model model;
 
-  model.weights.push_back({ {0, 0}, {0, 0} });
-  model.weights.push_back({ {0, 0}, {0, 0} });
-  model.weights.push_back({ {0, 0}, {0, 0} });
-  model.weights.push_back({ {0, 0} });
+  try
+  {
+    model.LoadModel("checkpoint.model");
+  }
+  catch (const std::exception& e)
+  {
+    std::cerr << "Exception caught: " << e.what() << std::endl;
 
-  model.biases.push_back({ 0, 0 });
-  model.biases.push_back({ 0, 0 });
-  model.biases.push_back({ 0, 0 });
-  model.biases.push_back({ 0 });
+    model.weights = { { {0, 0}, {0, 0} }, { {0, 0}, {0, 0} }, { {0, 0}, {0, 0} }, { {0, 0} } };
+    model.biases = { { 0, 0 } , { 0, 0 } , { 0, 0 }, { 0 } };
+    model.activationFunctions = { { GLearn::NeuralNetwork::Activation::ReLu,
+     GLearn::NeuralNetwork::Activation::ReLu }, { GLearn::NeuralNetwork::Activation::ReLu , GLearn::NeuralNetwork::Activation::ReLu }, { GLearn::NeuralNetwork::Activation::Sigmoid , GLearn::NeuralNetwork::Activation::Sigmoid }, { GLearn::NeuralNetwork::Activation::Sigmoid } };
+    model.errorFunction = GLearn::NeuralNetwork::Error::SquaredError;
 
-  model.errorFunction = GLearn::NeuralNetwork::Error::SquaredError;
+    model.Randomize();
+  }
 
-  model.activationFunctions.push_back(
-    { GLearn::NeuralNetwork::Activation::ReLu,
-     GLearn::NeuralNetwork::Activation::ReLu });
-  model.activationFunctions.push_back({ GLearn::NeuralNetwork::Activation::ReLu , GLearn::NeuralNetwork::Activation::ReLu });
-  model.activationFunctions.push_back({ GLearn::NeuralNetwork::Activation::Sigmoid , GLearn::NeuralNetwork::Activation::Sigmoid });
-  model.activationFunctions.push_back(
-    { GLearn::NeuralNetwork::Activation::Sigmoid });
-
-  model.Randomize();
   model.Print();
 
   std::cin.get();
 
-  model = net.Learn({ {1, 4}, {3, 2}, {2, 9}, {2, 6}, {5, 4}, {8, 3}, {2, 4} }, { {1}, {1}, {0}, {0}, {1}, {0}, {1} }, model, 100000, 0.2, 0.5);
+  model = net.Learn({ {1, 4}, {3, 2}, {2, 9}, {2, 6}, {5, 4}, {8, 3}, {2, 4} }, { {1}, {1}, {0}, {0}, {1}, {0}, {1} }, model, 100000, 0.8, 0.5);
 
-  auto output = net.CalculateOutput({ 2, 7 }, model);
+  model.SaveModel("checkpoint.model");
+
+  auto output = net.CalculateOutput({ 5, 4 }, model);
 
   for (const auto& out : output) {
     std::cout << out;
