@@ -1,12 +1,12 @@
 #include "GLearn/NeuralNetwork/ActivationFunctions.hpp"
 #include "GLearn/NeuralNetwork/ErrorFunctions.hpp"
-#include "GLearn/NeuralNetwork/Model.hpp"
+#include "GLearn/Data/Model.hpp"
 #include "GLearn/NeuralNetwork/Network.hpp"
 #include <iostream>
 
 int main(int argc, char* argv[]) {
   GLearn::NeuralNetwork::Network net;
-  GLearn::NeuralNetwork::Model model;
+  GLearn::Data::Model model;
 
   try
   {
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     throw std::runtime_error("Invalid model");
   }
 
-  model = net.Learn({ {1, 4}, {3, 2}, {2, 9}, {2, 6}, {5, 4}, {8, 3}, {2, 4} }, { {1, 0}, {1, 1}, {0, 0}, {0, 1}, {1, 1}, {0, 1}, {1, 0} }, model, 100000, 0.001, 0.9);
+  model = net.Learn({ {1, 4}, {3, 2}, {2, 9}, {2, 6}, {5, 4}, {8, 3}, {2, 4}, {5, 8} }, { {1, 0}, {1, 1}, {0, 0}, {0, 1}, {1, 1}, {0, 1}, {1, 0}, {1, 1} }, model, 1000, 8, 0.1, 0.9);
 
   model.SaveModel("checkpoint.model");
 

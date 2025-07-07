@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.15)
+project(GLearn-Data CXX)
+
+if(BUILD_SHARED_LIBS)
+  message(STATUS "-------------------------------------------------")
+  message(STATUS "BUILDING GLearn-Data as a SHARED LIBRARY")
+  message(STATUS "-------------------------------------------------")
+else()
+  message(STATUS "-------------------------------------------------")
+  message(STATUS "BUILDING GLearn-Data as a STATIC LIBRARY")
+  message(STATUS "-------------------------------------------------")
+endif()
+
+file(GLOB SOURCES "*.cpp")
+add_library(GLearn-Data ${SOURCES})
+target_include_directories(GLearn-Data PRIVATE ../../include/)
+target_include_directories(GLearn-Data PRIVATE ../../external/json/include/)
+target_link_libraries(GLearn-Data PRIVATE nlohmann_json::nlohmann_json)

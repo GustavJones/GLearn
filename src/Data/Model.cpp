@@ -1,23 +1,12 @@
-#pragma once
-#include "GLearn/NeuralNetwork/ActivationFunctions.hpp"
-#include "GLearn/NeuralNetwork/ErrorFunctions.hpp"
-#include <cmath>
-#include <vector>
+#include "GLearn/Data/Model.hpp"
 #include <random>
 #include <iostream>
 #include <fstream>
-#include <string>
 #include "nlohmann/json.hpp"
 
 namespace GLearn {
-namespace NeuralNetwork {
-struct Model {
-  ERROR_FUNCTION errorFunction = nullptr;
-  std::vector<std::vector<ACTIVATION_FUNCTION>> activationFunctions;
-  std::vector<std::vector<std::vector<double_t>>> weights;
-  std::vector<std::vector<double_t>> biases;
-
-  inline void Randomize() {
+namespace Data {
+  void Model::Randomize() {
     std::default_random_engine engine((std::double_t)std::time(nullptr));
     std::uniform_real_distribution<> distribution(0, 1);
 
@@ -41,7 +30,7 @@ struct Model {
     }
   }
 
-  inline void Print() {
+  void Model::Print() const {
     std::cout << "---------------------------------------" << std::endl;
 
     for (size_t layer = 0; layer < weights.size(); layer++)
@@ -71,8 +60,7 @@ struct Model {
     }
   }
 
-  [[nodiscard]]
-  inline bool IsValid() const {
+  bool Model::IsValid() const {
     if (errorFunction == nullptr)
       return false;
 
@@ -106,11 +94,11 @@ struct Model {
     return true;
   }
 
-  inline void LoadModel(const std::string& _filepath, const std::map<std::string, ERROR_FUNCTION>& _errorFunctionNames = Error::Functions, const std::map<std::string, ACTIVATION_FUNCTION>& _activationFunctionNames = Activation::Functions) {
+  void Model::LoadModel(const std::string& _filepath, const std::map<std::string, ERROR_FUNCTION>& _errorFunctionNames, const std::map<std::string, ACTIVATION_FUNCTION>& _activationFunctionNames) {
     nlohmann::json modelJson;
     std::string modelString;
     char c;
-    
+
     std::vector<std::vector<double_t>> layerWeights;
     std::vector<double_t> layerBiases;
     std::vector<ACTIVATION_FUNCTION> layerActivationFunctions;
@@ -193,7 +181,7 @@ struct Model {
     }
   }
 
-  inline void SaveModel(const std::string& _filepath, const std::map<std::string, ERROR_FUNCTION> &_errorFunctionNames = Error::Functions, const std::map<std::string, ACTIVATION_FUNCTION>& _activationFunctionNames = Activation::Functions, const size_t _jsonIndentSize = 2) {
+  void Model::SaveModel(const std::string& _filepath, const std::map<std::string, ERROR_FUNCTION>& _errorFunctionNames, const std::map<std::string, ACTIVATION_FUNCTION>& _activationFunctionNames, const size_t _jsonIndentSize) {
     if (!IsValid()) throw std::runtime_error("Cannot save invalid model");
 
     nlohmann::json modelJson;
@@ -249,6 +237,5 @@ struct Model {
     f.write(modelString.c_str(), modelString.length());
     f.close();
   }
-};
-} // namespace NeuralNetwork
-} // namespace GLearn
+}
+}
