@@ -70,6 +70,7 @@ Model Network::_ModifyWeight(
 
   double_t slope; // dError / dWeight
   std::vector<double_t> slopes;
+  std::vector<std::future<double_t>> threads;
 
   // Old prediction based slope
   //double_t dError, dWeight;
@@ -90,7 +91,14 @@ Model Network::_ModifyWeight(
 
   for (size_t i = 0; i < _inputs.size(); i++)
   {
-    slopes.push_back(_CalculateWeightCostDerivative(_layer, _neuron, _weight, _inputs[i], _expectedOutputs[i], _model));
+    threads.push_back(std::async(std::launch::async, &Network::_CalculateWeightCostDerivative, this, _layer, _neuron, _weight, _inputs[i], _expectedOutputs[i], _model));
+    //slopes.push_back(_CalculateWeightCostDerivative(_layer, _neuron, _weight, _inputs[i], _expectedOutputs[i], _model));
+  }
+
+  for (size_t i = 0; i < threads.size(); i++)
+  {
+    threads[i].wait();
+    slopes.push_back(threads[i].get());
   }
 
   slope = GLearn::NeuralNetwork::Mean(slopes);
@@ -108,6 +116,7 @@ Model Network::_ModifyBias(
 
   double_t slope; // dError / dWeight
   std::vector<double_t> slopes;
+  std::vector<std::future<double_t>> threads;
 
   // Old prediction based slope
   //double_t dError, dBias;
@@ -134,7 +143,14 @@ Model Network::_ModifyBias(
 
   for (size_t i = 0; i < _inputs.size(); i++)
   {
-    slopes.push_back(_CalculateBiasCostDerivative(_layer, _neuron, _inputs[i], _expectedOutputs[i], _model));
+    threads.push_back(std::async(std::launch::async, &Network::_CalculateBiasCostDerivative, this, _layer, _neuron, _inputs[i], _expectedOutputs[i], _model));
+    //slopes.push_back(_CalculateBiasCostDerivative(_layer, _neuron, _inputs[i], _expectedOutputs[i], _model));
+  }
+
+  for (size_t i = 0; i < threads.size(); i++)
+  {
+    threads[i].wait();
+    slopes.push_back(threads[i].get());
   }
 
   slope = GLearn::NeuralNetwork::Mean(slopes);
