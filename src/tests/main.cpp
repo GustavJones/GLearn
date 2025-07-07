@@ -16,27 +16,28 @@ int main(int argc, char* argv[]) {
   {
     std::cerr << "Exception caught: " << e.what() << std::endl;
 
-    model.weights = { { {0, 0}, {0, 0} }, { {0, 0}, {0, 0} }, { {0, 0}, {0, 0} }, { {0, 0} } };
-    model.biases = { { 0, 0 } , { 0, 0 } , { 0, 0 }, { 0 } };
-    model.activationFunctions = { { GLearn::NeuralNetwork::Activation::ReLu,
-     GLearn::NeuralNetwork::Activation::ReLu }, { GLearn::NeuralNetwork::Activation::ReLu , GLearn::NeuralNetwork::Activation::ReLu }, { GLearn::NeuralNetwork::Activation::Sigmoid , GLearn::NeuralNetwork::Activation::Sigmoid }, { GLearn::NeuralNetwork::Activation::Sigmoid } };
-    model.errorFunction = GLearn::NeuralNetwork::Error::SquaredError;
+    model.weights = { { {1, 1}, {1, 1} }, { {1, 1}, {1, 1} }, { {1, 1}, {1, 1} }, { {1, 1}, {1, 1} } };
+    model.biases = { { 0, 0 } , { 0, 0 } , { 0, 0 }, { 0, 0 } };
+    model.activationFunctions = { { GLearn::NeuralNetwork::Activation::Sigmoid,
+     GLearn::NeuralNetwork::Activation::Sigmoid }, { GLearn::NeuralNetwork::Activation::ReLu , GLearn::NeuralNetwork::Activation::ReLu }, { GLearn::NeuralNetwork::Activation::Sigmoid , GLearn::NeuralNetwork::Activation::Sigmoid }, { GLearn::NeuralNetwork::Activation::Sigmoid, GLearn::NeuralNetwork::Activation::Sigmoid } };
+    model.errorFunction = GLearn::NeuralNetwork::Error::AbsoluteError;
 
     model.Randomize();
   }
 
-  model.Print();
+  if (!model.IsValid())
+  {
+    throw std::runtime_error("Invalid model");
+  }
 
-  std::cin.get();
-
-  model = net.Learn({ {1, 4}, {3, 2}, {2, 9}, {2, 6}, {5, 4}, {8, 3}, {2, 4} }, { {1}, {1}, {0}, {0}, {1}, {0}, {1} }, model, 100000, 0.8, 0.5);
+  model = net.Learn({ {1, 4}, {3, 2}, {2, 9}, {2, 6}, {5, 4}, {8, 3}, {2, 4} }, { {1, 0}, {1, 1}, {0, 0}, {0, 1}, {1, 1}, {0, 1}, {1, 0} }, model, 100000, 0.001, 0.9);
 
   model.SaveModel("checkpoint.model");
 
   auto output = net.CalculateOutput({ 5, 4 }, model);
 
   for (const auto& out : output) {
-    std::cout << out;
+    std::cout << out << ' ';
   }
 
   std::cout << std::endl;

@@ -2,6 +2,7 @@
 #include "GLearn/NeuralNetwork/ActivationFunctions.hpp"
 #include "GLearn/NeuralNetwork/ErrorFunctions.hpp"
 #include "GLearn/NeuralNetwork/Model.hpp"
+#include "GLearn/NeuralNetwork/Derivatives.hpp"
 #include <cmath>
 #include <vector>
 
@@ -50,6 +51,22 @@ private:
 
   [[nodiscard]]
   double_t _CalculateDatapointError(const Model& _model, const std::vector<double_t>& _input, const std::vector<double_t>& _expectedOutput);
+
+  [[nodiscard]]
+  Derivatives _CalculateDeltas(const Model &_model, const std::vector<double_t>& _input, const std::vector<double_t>& _expectedOutput);
+
+  [[nodiscard]]
+  double_t _CalculateBiasCostDerivative(const size_t _layer, const size_t _neuron, const std::vector<double_t>& _input,
+    const std::vector<double_t>& _expectedOutput,
+    const Model& _model);
+
+  [[nodiscard]]
+  double_t _CalculateWeightCostDerivative(const size_t _layer, const size_t _neuron, const size_t _weight, const std::vector<double_t>& _input,
+    const std::vector<double_t>& _expectedOutput,
+    const Model& _model);
+
+  [[nodiscard]]
+  double_t _CalculateParentDerivative(const size_t _layer, const size_t _neuron, const Model& _model, const std::vector<std::vector<double_t>>& _activatedStructure, const std::vector<std::vector<double_t>>& _unactivatedStructure, const std::vector<double_t>& _expectedOutput);
 
 public:
   [[nodiscard]]

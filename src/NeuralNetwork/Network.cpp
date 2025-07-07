@@ -69,21 +69,31 @@ Model Network::_ModifyWeight(
   Model newModel;
 
   double_t slope; // dError / dWeight
-  double_t dError, dWeight;
+  std::vector<double_t> slopes;
 
-  double_t finalMeanError, startMeanError;
+  // Old prediction based slope
+  //double_t dError, dWeight;
 
-  dWeight = SLOPE_SIZE;
+  //double_t finalMeanError, startMeanError;
 
-  newModel = _model;
-  newModel.weights[_layer][_neuron][_weight] += dWeight;
+  //dWeight = SLOPE_SIZE;
 
-  finalMeanError = CalculateMeanError(_inputs, _expectedOutputs, newModel);
-  startMeanError = CalculateMeanError(_inputs, _expectedOutputs, _model);
+  //newModel = _model;
+  //newModel.weights[_layer][_neuron][_weight] += dWeight;
 
-  dError = finalMeanError - startMeanError;;
+  //finalMeanError = CalculateMeanError(_inputs, _expectedOutputs, newModel);
+  //startMeanError = CalculateMeanError(_inputs, _expectedOutputs, _model);
 
-  slope = dError / dWeight;
+  //dError = finalMeanError - startMeanError;;
+
+  //slope = dError / dWeight;
+
+  for (size_t i = 0; i < _inputs.size(); i++)
+  {
+    slopes.push_back(_CalculateWeightCostDerivative(_layer, _neuron, _weight, _inputs[i], _expectedOutputs[i], _model));
+  }
+
+  slope = GLearn::NeuralNetwork::Mean(slopes);
 
   _model.weights[_layer][_neuron][_weight] -= slope * _learningRate;
   return _model;
@@ -97,27 +107,37 @@ Model Network::_ModifyBias(
   Model newModel;
 
   double_t slope; // dError / dWeight
-  double_t dError, dBias;
+  std::vector<double_t> slopes;
 
-  double_t finalMeanError, startMeanError;
+  // Old prediction based slope
+  //double_t dError, dBias;
 
-  dBias = SLOPE_SIZE;
+  //double_t finalMeanError, startMeanError;
 
-  newModel = _model;
-  newModel.biases[_layer][_neuron] += dBias;
+  //dBias = SLOPE_SIZE;
 
-  auto finalThread = std::async(std::launch::async, &Network::CalculateMeanError, this, _inputs, _expectedOutputs, newModel);
-  auto startThread = std::async(std::launch::async, &Network::CalculateMeanError, this, _inputs, _expectedOutputs, _model);
+  //newModel = _model;
+  //newModel.biases[_layer][_neuron] += dBias;
 
-  finalThread.wait();
-  startThread.wait();
+  //auto finalThread = std::async(std::launch::async, &Network::CalculateMeanError, this, _inputs, _expectedOutputs, newModel);
+  //auto startThread = std::async(std::launch::async, &Network::CalculateMeanError, this, _inputs, _expectedOutputs, _model);
 
-  finalMeanError = finalThread.get();
-  startMeanError = startThread.get();
+  //finalThread.wait();
+  //startThread.wait();
 
-  dError = finalMeanError - startMeanError;
+  //finalMeanError = finalThread.get();
+  //startMeanError = startThread.get();
 
-  slope = dError / dBias;
+  //dError = finalMeanError - startMeanError;
+
+  //slope = dError / dBias;
+
+  for (size_t i = 0; i < _inputs.size(); i++)
+  {
+    slopes.push_back(_CalculateBiasCostDerivative(_layer, _neuron, _inputs[i], _expectedOutputs[i], _model));
+  }
+
+  slope = GLearn::NeuralNetwork::Mean(slopes);
 
   _model.biases[_layer][_neuron] -= slope * _learningRate;
   return _model;
@@ -136,10 +156,150 @@ double_t Network::_CalculateDatapointError(const Model &_model, const std::vecto
 
   for (size_t j = 0; j < datapointOutput.size(); j++) {
     error += _model.errorFunction(datapointOutput[j],
-      _expectedOutput[j]);
+      _expectedOutput[j], false);
   }
 
   return error;
+}
+
+Derivatives Network::_CalculateDeltas(const Model& _model, const std::vector<double_t>& _input, const std::vector<double_t>& _expectedOutput) {
+  Derivatives out;
+  std::vector<std::vector<double_t>> unactivatedStructure = CalculateUnactivatedStructure(_input, _model);
+  std::vector<std::vector<double_t>> activatedStructure = CalculateStructure(_input, _model);
+
+  out.deltas.resize(_model.weights.size());
+  out.biasDeltas.resize(_model.weights.size());
+  out.weightDeltas.resize(_model.weights.size());
+
+  double_t sum;
+  size_t lastLayer = _model.weights.size() - 1;
+
+  out.deltas[lastLayer].resize(_model.weights[lastLayer].size());
+  out.biasDeltas[lastLayer].resize(_model.weights[lastLayer].size());
+  out.weightDeltas[lastLayer].resize(_model.weights[lastLayer].size());
+
+  for (size_t neuron = 0; neuron < _model.weights[lastLayer].size(); neuron++)
+  {
+    out.weightDeltas[lastLayer][neuron].resize(_model.weights[lastLayer][neuron].size());
+
+    out.deltas[lastLayer][neuron] = _model.errorFunction(activatedStructure[lastLayer][neuron], _expectedOutput[neuron], true) * _model.activationFunctions[lastLayer][neuron](unactivatedStructure[lastLayer][neuron], true);
+    out.biasDeltas[lastLayer][neuron] = out.deltas[lastLayer][neuron];
+
+    for (size_t weight = 0; weight < out.weightDeltas[lastLayer][neuron].size(); weight++)
+    {
+      if (lastLayer > 0)
+      {
+        out.weightDeltas[lastLayer][neuron][weight] = out.deltas[lastLayer][neuron] * activatedStructure[lastLayer - 1][weight];
+      }
+      else
+      {
+        out.weightDeltas[lastLayer][neuron][weight] = out.deltas[lastLayer][neuron] * _input[weight];
+      }      
+    }
+  }
+
+  for (int64_t layer = lastLayer - 1; layer >= 0; layer--)
+  {
+    out.deltas[layer].resize(_model.weights[layer].size());
+    out.biasDeltas[layer].resize(_model.weights[layer].size());
+    out.weightDeltas[layer].resize(_model.weights[layer].size());
+
+    for (size_t neuron = 0; neuron < _model.weights[layer].size(); neuron++)
+    {
+      out.weightDeltas[layer][neuron].resize(_model.weights[layer][neuron].size());
+
+      sum = 0.0;
+      for (size_t i = 0; i < _model.weights[layer + 1].size(); i++)
+      {
+        sum += _model.weights[layer + 1][i][neuron] * out.deltas[layer + 1][i];
+      }
+
+      out.deltas[layer][neuron] = _model.activationFunctions[layer][neuron](unactivatedStructure[layer][neuron], true) * sum;
+      out.biasDeltas[layer][neuron] = out.deltas[layer][neuron];
+
+      for (size_t weight = 0; weight < out.weightDeltas[layer][neuron].size(); weight++)
+      {
+        if (layer > 0)
+        {
+          out.weightDeltas[layer][neuron][weight] = out.deltas[layer][neuron] * activatedStructure[layer - 1][weight];
+        }
+        else
+        {
+          out.weightDeltas[layer][neuron][weight] = out.deltas[layer][neuron] * _input[weight];
+        }        
+      }
+    }
+  }
+
+  return out;
+}
+
+double_t Network::_CalculateBiasCostDerivative(const size_t _layer, const size_t _neuron, const std::vector<double_t>& _input,
+  const std::vector<double_t>& _expectedOutput,
+  const Model& _model) {
+  const std::vector<std::vector<double_t>> unactivatedStructure = CalculateUnactivatedStructure(_input, _model);
+  const std::vector<std::vector<double_t>> activatedStructure = CalculateStructure(_input, _model);
+
+  double_t biasDerivative, activationDerivative, parentDerivative;
+  biasDerivative = 1.0;
+  activationDerivative = _model.activationFunctions[_layer][_neuron](unactivatedStructure[_layer][_neuron], true);
+
+  parentDerivative = _CalculateParentDerivative(_layer, _neuron, _model, activatedStructure, unactivatedStructure, _expectedOutput);
+
+  return biasDerivative * activationDerivative * parentDerivative;
+}
+
+double_t Network::_CalculateWeightCostDerivative(const size_t _layer, const size_t _neuron, const size_t _weight, const std::vector<double_t>& _input,
+  const std::vector<double_t>& _expectedOutput,
+  const Model& _model) {
+  const std::vector<std::vector<double_t>> unactivatedStructure = CalculateUnactivatedStructure(_input, _model);
+  const std::vector<std::vector<double_t>> activatedStructure = CalculateStructure(_input, _model);
+
+  double_t weightDerivative, activationDerivative, parentDerivative;
+
+  if (_layer > 0)
+  {
+    weightDerivative = activatedStructure[_layer - 1][_weight];
+  }
+  else
+  {
+    weightDerivative = _input[_weight];
+  }
+  
+  activationDerivative = _model.activationFunctions[_layer][_neuron](unactivatedStructure[_layer][_neuron], true);
+
+  parentDerivative = _CalculateParentDerivative(_layer, _neuron, _model, activatedStructure, unactivatedStructure, _expectedOutput);
+
+  return weightDerivative * activationDerivative * parentDerivative;
+}
+
+double_t Network::_CalculateParentDerivative(const size_t _layer, const size_t _neuron, const Model& _model, const std::vector<std::vector<double_t>>& _activatedStructure, const std::vector<std::vector<double_t>>& _unactivatedStructure, const std::vector<double_t>& _expectedOutput) {
+  const size_t nextLayer = _layer + 1;
+  double_t derivative = 0;
+  double_t branchDerivative;
+
+  if (nextLayer >= _model.weights.size())
+  {
+    return _model.errorFunction(_activatedStructure[_layer][_neuron], _expectedOutput[_neuron], true);
+  }
+
+  // For every connected neuron
+  for (size_t i = 0; i < _model.weights[nextLayer].size(); i++)
+  {
+    // dy(current) / da(previous)
+    branchDerivative = _model.weights[nextLayer][i][_neuron];
+
+    // da(current) / dy(current)
+    branchDerivative *= _model.activationFunctions[nextLayer][i](_unactivatedStructure[nextLayer][i], true);
+
+    // dC / da(current)
+    branchDerivative *= _CalculateParentDerivative(nextLayer, i, _model, _activatedStructure, _unactivatedStructure, _expectedOutput);
+
+    // Sum of different neuron weights because z = w*a1 + w*a2 + ... + b so sum of derivatives
+    derivative += branchDerivative;
+  }
+
+  return derivative;
 }
 
 double_t Network::CalculateMeanError(
@@ -203,7 +363,7 @@ Network::CalculateStructure(const std::vector<double_t> &_inputs,
       neuronOutput = _CalculateNeuron(
         layerInputs, _model.weights[i][j], _model.biases[i][j]);
 
-      layerOutputs.push_back(_model.activationFunctions[i][j](neuronOutput));
+      layerOutputs.push_back(_model.activationFunctions[i][j](neuronOutput, false));
     }
 
     layerInputs = layerOutputs;
@@ -240,12 +400,13 @@ Network::CalculateUnactivatedStructure(const std::vector<double_t>& _inputs, con
       neuronOutput = _CalculateNeuron(
         layerInputs, _model.weights[i][j], _model.biases[i][j]);
 
-      layerOutputs.push_back(_model.activationFunctions[i][j](neuronOutput));
+      layerOutputs.push_back(_model.activationFunctions[i][j](neuronOutput, false));
       unactivatedOutputs.push_back(neuronOutput);
     }
 
     layerInputs = layerOutputs;
     output.push_back(unactivatedOutputs);
+    unactivatedOutputs.clear();
     layerOutputs.clear();
   }
 
