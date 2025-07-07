@@ -99,12 +99,15 @@ Data::Model Network::_ModifyWeight(
   for (size_t i = 0; i < threads.size(); i++)
   {
     threads[i].wait();
-    slopes.push_back(threads[i].get());
+    //slopes.push_back(threads[i].get());
+
+    slope = threads[i].get();
+    _model.weights[_layer][_neuron][_weight] -= slope * _learningRate;
   }
 
-  slope = GLearn::NeuralNetwork::Mean(slopes);
+  //slope = GLearn::NeuralNetwork::Mean(slopes);
 
-  _model.weights[_layer][_neuron][_weight] -= slope * _learningRate;
+  //_model.weights[_layer][_neuron][_weight] -= slope * _learningRate;
   return _model;
 }
 
@@ -151,12 +154,15 @@ Data::Model Network::_ModifyBias(
   for (size_t i = 0; i < threads.size(); i++)
   {
     threads[i].wait();
-    slopes.push_back(threads[i].get());
+    //slopes.push_back(threads[i].get());
+
+    slope = threads[i].get();
+    _model.biases[_layer][_neuron] -= slope * _learningRate;
   }
 
-  slope = GLearn::NeuralNetwork::Mean(slopes);
+  //slope = GLearn::NeuralNetwork::Mean(slopes);
 
-  _model.biases[_layer][_neuron] -= slope * _learningRate;
+  //_model.biases[_layer][_neuron] -= slope * _learningRate;
   return _model;
 }
 
